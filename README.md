@@ -41,3 +41,66 @@ This repository provides a complete, cross-validated algorithmic framework in **
      │  • Known exact sequence σ │     │  • Firing vector y ∈ N^|T|│     │  • Window Sb = floor(k/d) │
      │  • Linear O(|σ|·|P|)      │     │  • Non-dominated frontier │     │  • Threshold s_min + c    │
      └───────────────────────────┘     └───────────────────────────┘     └───────────────────────────┘
+
+
+### 1. Inverse Observation — Complexity O(|σ| · |P|)
+When the exact transition sequence **σ = tᵢ₁ ... tᵢₙ** is known, backward firing updates reconstruct the unique minimal initial marking in linear time by ensuring every intermediate marking satisfies **M'' ≥ Post(·, tⱼ)** prior to reversing the incidence matrix **C = Post − Pre**.
+
+### 2. Exact Backward Exploration with Pareto Dominance
+When transition labels collide (**L(tᵢ) = L(tⱼ)**), every observed label branches into multiple candidate firing vectors **y ∈ ℕ<sup>|T|</sup>**. To prevent redundant state growth while preserving **100% mathematical optimality**, each firing-vector bucket maintains a strict **Pareto non-dominated front**:
+
+$$M_{\text{ex}} \le M_{\text{new}} \iff \forall p \in P,\; M_{\text{ex}}(p) \le M_{\text{new}}(p) \implies M_{\text{new}} \text{ is discarded.}$$
+
+### 3. Bounded-Memory Heuristic — Window S<sub>b</sub> = ⌊k / d⌋
+To scale to high-ambiguity industrial and robotic networks, the heuristic algorithm executes periodic state-space pruning every **S<sub>b</sub>** steps, retaining only candidate markings whose total token count satisfies:
+
+$$\sum_{p \in P} M_0(p) \le s_{\min} + c$$
+
+where **s<sub>min</sub>** is the current minimum token sum across active fronts and **c ≥ 0** controls the exploration slack.
+
+---
+
+## 🔬 Benchmark Validation (w = abac)
+
+Evaluated on a 5-place, 4-transition benchmark net featuring structural concurrency (**t₂ : P₁ → {P₂, P₃}**), synchronization (**t₃ : {P₂, P₃} → P₄**), and label ambiguity (**L(t₁) = L(t₃) = a**, **L(t₂) = b**, **L(t₄) = c**):
+
+| Algorithmic Approach | Input Requirement | Optimality Guarantee | Reconstructed M₀ | Minimal Tokens | Computational Complexity |
+| :--- | :--- | :--- | :---: | :---: | :--- |
+| **Alg. 1 — Inverse Observation** | Exact sequence **σ** | Exact (fixed **σ**) | `[2, 0, 0, 0, 0]` | **2** | O(\|σ\| · \|P\|) — Linear |
+| **Alg. 2 — Exact Pareto Search** | Label word **w** | **Mathematically Guaranteed** | `[2, 0, 0, 0, 0]` | **2** | Exponential (worst-case branching) |
+| **Alg. 3 — Heuristic (c=1, d=2)** | Label word **w** | Tunable via **(c, d)** | `[2, 0, 0, 0, 0]` | **2** | **Polynomial / Bounded Memory** |
+
+> **Key Takeaway:** All three approaches converge identically to **M₀ = [2, 0, 0, 0, 0]ᵀ** (requiring **2 tokens** in **P₁** to sustain the concurrent firing of **t₁** and **t₂t₃t₄**), confirming zero optimality loss under tuned heuristic pruning.
+
+---
+
+## 🤖 Real-World Case Study: Autonomous Robotic Surveillance (3 × 3 Grid)
+
+To stress-test scalability under severe sensor aliasing, the framework is applied to an **autonomous mobile robot patrolling a 3 × 3 spatial grid**:
+* **Topological Scale:** **9 places** (grid zones **P₀ ... P₈**) and **24 bidirectional transitions** (valid inter-zone movements), driven by an observed sensor trajectory of length **|w| = 20** (`w = fbebaedfcbdbcbabcbcd`).
+* **Combinatorial Bottleneck:** Sensor labels exhibit heavy spatial aliasing—label `e` maps to **6 distinct transitions** and label `d` maps to **5 transitions**—causing exhaustive exact search (Alg. 2) to suffer combinatorial memory explosion (**> 6²⁰** theoretical paths).
+* **Heuristic Resolution:** With hyperparameters **(c = 1, d = 2)**, Algorithm 3 prunes dominated trajectories in milliseconds and isolates the exact **Minimal Initial Marking of 1 token** (confirming single-robot deployment and pinpointing its initial sector), with identical numerical outputs across both Python and MATLAB engines.
+
+---
+
+## ⚖️ Cross-Language Engineering Comparison: Python vs. MATLAB
+
+| Architectural Dimension | Python Implementation (`mim_petri.py`) | MATLAB Implementation (`mim_petri.m`) |
+| :--- | :--- | :--- |
+| **Linear Algebra Engine** | `numpy.ndarray` (0-based indexing) | Native dense matrices (1-based indexing) |
+| **Firing-Vector Hash Map** | Native `dict` keyed directly by immutable `tuple(y)` | `containers.Map` keyed by serialized `mat2str(y)` |
+| **Element-Wise Dominance** | Vectorized `np.maximum` & generator `all()` | Native `max()` & logical array comparison |
+| **Primary Engineering Role** | Fast prototyping, CI/CD & embedded Linux deployment | Control-system verification & academic simulation |
+
+---
+
+## 📂 Repository Structure
+
+```text
+labeled-petri-net-mim-estimation/
+├── python/
+│   └── mim_petri.py                  # Full Python/NumPy suite (Alg. 1–3 + 3x3 robotic benchmark)
+├── matlab/
+│   └── mim_petri.m                   # Full MATLAB suite + hyperparameter sensitivity matrix
+├── Rapport_RdP_Etiquetes_MIM.pdf     # Complete mathematical derivations, proofs & benchmarks
+└── README.md
