@@ -42,7 +42,7 @@ This repository provides a complete, cross-validated algorithmic framework in **
      │  • Linear O(|σ|·|P|)      │     │  • Non-dominated frontier │     │  • Threshold s_min + c    │
      └───────────────────────────┘     └───────────────────────────┘     └───────────────────────────┘
 
-
+```
 ### 1. Inverse Observation — Complexity O(|σ| · |P|)
 When the exact transition sequence **σ = tᵢ₁ ... tᵢₙ** is known, backward firing updates reconstruct the unique minimal initial marking in linear time by ensuring every intermediate marking satisfies **M'' ≥ Post(·, tⱼ)** prior to reversing the incidence matrix **C = Post − Pre**.
 
